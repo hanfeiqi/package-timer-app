@@ -18,7 +18,7 @@ if waybill_file and sla_file:
 
     # 清洗字段
     df['签入时间'] = pd.to_datetime(df['签入时间'], dayfirst=True, errors='coerce')
-    df['中心'] = df['派送方'].str[:3]
+    df['中心'] = df['目的中心'].str[:3]
 
     # 合并SLA标准
     sla_dict = dict(zip(sla_df['中心'], sla_df['时效考核要求（小时）']))
