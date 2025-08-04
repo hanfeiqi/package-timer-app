@@ -80,22 +80,35 @@ if waybill_file and sla_file:
     
     import matplotlib.pyplot as plt
 
-    status_summary = pd.DataFrame({
-        'Status': ['On-Time', 'Warning', 'Urgent', 'Overdue'],
-        'Count': [120, 45, 20, 15]
-})
 
-# 英文柱状图
+    status_map = {
+        '正常': 'On-Time',
+        '预警': 'Warning',
+        '紧急': 'Urgent',
+        '超时': 'Overdue'
+}
+
+    # 添加英文状态列（确保 df_valid 存在）
+    df_valid['SLA Status'] = df_valid['血条状态'].map(status_map)
+
+    # 统计英文状态数量
+    status_summary = df_valid['SLA Status'].value_counts().reset_index()
+    status_summary.columns = ['Status', 'Count']
+
+    # 柱状图
     fig_bar, ax_bar = plt.subplots()
     ax_bar.bar(status_summary['Status'], status_summary['Count'], color=['green', 'yellow', 'red', 'darkred'])
     ax_bar.set_title('📊 Package SLA Status (Bar Chart)')
     ax_bar.set_ylabel('Parcel Count')
 
-# 英文饼图
+    # 饼图
     fig_pie, ax_pie = plt.subplots()
     ax_pie.pie(status_summary['Count'], labels=status_summary['Status'],
                autopct='%1.1f%%', startangle=90,
                colors=['green', 'yellow', 'red', 'darkred'])
     ax_pie.set_title('🧁 Package SLA Status (Pie Chart)')
 
-    fig_bar, fig_pie
+    # 在 Streamlit 中显示
+    st.pyplot(fig_bar)
+    st.pyplot(fig_pie)
+
