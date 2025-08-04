@@ -63,6 +63,23 @@ if waybill_file and sla_file:
             show_cols.remove(col)
     st.dataframe(df_valid[show_cols].head(50))
 
+    # 导出
+    def to_excel(dataframes: dict) -> BytesIO:
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            for name, df in dataframes.items():
+                df.to_excel(writer, index=False, sheet_name=name[:31])
+        output.seek(0)
+        return output
+
+    all_sheets = {status: group for status, group in df_valid.groupby('血条状态')}
+    all_sheets['血条状态总览'] = status_summary
+
+    excel_data = to_excel(all_sheets)
+    st.download_button("📥 下载完整分析结果 Excel", data=excel_data, file_name="血条状态分析结果.xlsx")
+    
+    import matplotlib.pyplot as plt
+
 # 统计血条状态分布
 status_counts = df_valid['血条状态'].value_counts().reset_index()
 status_counts.columns = ['状态', '数量']
@@ -82,17 +99,3 @@ ax2.pie(status_counts['数量'], labels=status_counts['状态'],
 ax2.set_title('🧁 血条状态分布（饼图）')
 st.pyplot(fig2)
 
-    # 导出
-def to_excel(dataframes: dict) -> BytesIO:
-        output = BytesIO()
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            for name, df in dataframes.items():
-                df.to_excel(writer, index=False, sheet_name=name[:31])
-        output.seek(0)
-        return output
-
-    all_sheets = {status: group for status, group in df_valid.groupby('血条状态')}
-    all_sheets['血条状态总览'] = status_summary
-
-    excel_data = to_excel(all_sheets)
-    st.download_button("📥 下载完整分析结果 Excel", data=excel_data, file_name="血条状态分析结果.xlsx")
