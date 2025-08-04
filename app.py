@@ -1,114 +1,85 @@
 
 import streamlit as st
 import pandas as pd
-from datetime import datetime
-from io import BytesIO
 import matplotlib.pyplot as plt
+from io import BytesIO
 
-st.set_page_config(page_title="包裹血条状态工具", layout="wide")
-st.title("📦 包裹血条状态计算工具（目的中心作为派送中心）")
+st.set_page_config(page_title="Package SLA Monitor", layout="wide")
 
-st.markdown("上传两份文件：")
-waybill_file = st.file_uploader("① 上传包裹数据文件（含“签入时间”、“目的中心”等）", type=["xlsx"])
-sla_file = st.file_uploader("② 上传 SLA 配置文件（字段包含“中心”和“SLA小时”）", type=["xlsx"])
+st.title("📦 Package SLA Tracker with Upload")
+st.markdown("Upload waybill Excel file and SLA standard file (center & deadline in hours).")
+
+waybill_file = st.file_uploader("📤 Upload Waybill Data (.xlsx)", type="xlsx")
+sla_file = st.file_uploader("📤 Upload SLA Standards (.xlsx)", type="xlsx")
 
 if waybill_file and sla_file:
     df = pd.read_excel(waybill_file)
-    st.write("📋 文件列名如下（用于排查字段）：", df.columns.tolist())
-
-    if '签入时间' not in df.columns or '目的中心' not in df.columns:
-        st.error("❌ 数据中缺少“签入时间”或“目的中心”字段，请检查文件格式")
-        st.stop()
-
     sla_df = pd.read_excel(sla_file)
-    sla_dict = dict(zip(sla_df['中心'], sla_df['SLA小时']))
 
-    # 数据清洗
+    # 清洗字段
     df['签入时间'] = pd.to_datetime(df['签入时间'], dayfirst=True, errors='coerce')
-    df['中心'] = df['目的中心'].astype(str).str[:3]
-    df['SLA小时'] = df['中心'].map(sla_dict)
-    now = datetime.now()
+    df['中心'] = df['派送方'].str[:3]
 
-    df_valid = df[df['SLA小时'].notnull()].copy()
-    df_valid['截止时间'] = df_valid['签入时间'] + pd.to_timedelta(df_valid['SLA小时'], unit='h')
-    df_valid['剩余时效'] = (df_valid['截止时间'] - now).dt.total_seconds() / 3600
+    # 合并SLA标准
+    sla_dict = dict(zip(sla_df['中心'], sla_df['时效考核要求（小时）']))
+    df['SLA时效（小时）'] = df['中心'].map(sla_dict)
 
+    # 当前时间 & 计算已耗时
+    now = pd.Timestamp.now()
+    df['已耗时（小时）'] = (now - df['签入时间']).dt.total_seconds() / 3600
+
+    # 血条状态分类
     def classify(row):
-        if row['剩余时效'] < 0:
-            return '超时', 'darkred'
-        elif row['剩余时效'] < 24:
-            return '紧急', 'red'
-        elif row['剩余时效'] < 48:
-            return '预警', 'yellow'
-        else:
+        deadline = row['SLA时效（小时）']
+        used = row['已耗时（小时）']
+        if pd.isna(deadline) or pd.isna(used):
+            return '未知', 'gray'
+        if used < 0.5 * deadline:
             return '正常', 'green'
+        elif used < 0.8 * deadline:
+            return '预警', 'yellow'
+        elif used < deadline:
+            return '紧急', 'red'
+        else:
+            return '超时', 'darkred'
 
-    df_valid[['血条状态', '血条颜色']] = df_valid.apply(classify, axis=1, result_type='expand')
+    df[['血条状态', '血条颜色']] = df.apply(classify, axis=1, result_type='expand')
+    df_valid = df.dropna(subset=['签入时间', 'SLA时效（小时）'])
 
-    # 状态统计
-    status_summary = (
-        df_valid.groupby('血条状态')
-        .size()
-        .reset_index(name='包裹数量')
-    )
-    status_summary['占比'] = (status_summary['包裹数量'] / status_summary['包裹数量'].sum()).round(4)
+    st.success(f"✅ Loaded {len(df_valid)} valid records")
 
-    st.subheader("🧾 血条状态统计")
-    st.dataframe(status_summary)
-
-    st.subheader("📋 包裹明细（部分示例）")
-    show_cols = ['箱/袋号', '中心', '签入时间', '截止时间', '剩余时效', '血条状态']
-    for col in show_cols:
-        if col not in df_valid.columns:
-            show_cols.remove(col)
-    st.dataframe(df_valid[show_cols].head(50))
-
-    # 导出
-    def to_excel(dataframes: dict) -> BytesIO:
-        output = BytesIO()
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            for name, df in dataframes.items():
-                df.to_excel(writer, index=False, sheet_name=name[:31])
-        output.seek(0)
-        return output
-
-    all_sheets = {status: group for status, group in df_valid.groupby('血条状态')}
-    all_sheets['血条状态总览'] = status_summary
-
-    excel_data = to_excel(all_sheets)
-    st.download_button("📥 下载完整分析结果 Excel", data=excel_data, file_name="血条状态分析结果.xlsx")
-    
-    import matplotlib.pyplot as plt
-
-
-    status_map = {
-        '正常': 'On-Time',
-        '预警': 'Warning',
-        '紧急': 'Urgent',
-        '超时': 'Overdue'
-}
-
-    # 添加英文状态列（确保 df_valid 存在）
+    # 状态英文映射
+    status_map = {'正常': 'On-Time', '预警': 'Warning', '紧急': 'Urgent', '超时': 'Overdue'}
     df_valid['SLA Status'] = df_valid['血条状态'].map(status_map)
 
-    # 统计英文状态数量
+    # 图表展示
     status_summary = df_valid['SLA Status'].value_counts().reset_index()
     status_summary.columns = ['Status', 'Count']
 
-    # 柱状图
-    fig_bar, ax_bar = plt.subplots(figsize=(3, 2))
-    ax_bar.bar(status_summary['Status'], status_summary['Count'], color=['green', 'yellow', 'red', 'darkred'])
-    ax_bar.set_title('📊 Package SLA Status (Bar Chart)')
-    ax_bar.set_ylabel('Parcel Count')
+    with st.expander("📊 View SLA Status Distribution Charts"):
+        fig_bar, ax_bar = plt.subplots(figsize=(6, 4))
+        ax_bar.bar(status_summary['Status'], status_summary['Count'], color=['green', 'yellow', 'red', 'darkred'])
+        ax_bar.set_title('📊 Package SLA Status (Bar Chart)')
+        ax_bar.set_ylabel('Parcel Count')
+        st.pyplot(fig_bar)
 
-    # 饼图
-    fig_pie, ax_pie = plt.subplots(figsize=(3, 3))
-    ax_pie.pie(status_summary['Count'], labels=status_summary['Status'],
-               autopct='%1.1f%%', startangle=90,
-               colors=['green', 'yellow', 'red', 'darkred'])
-    ax_pie.set_title('🧁 Package SLA Status (Pie Chart)')
+        fig_pie, ax_pie = plt.subplots(figsize=(5, 5))
+        ax_pie.pie(status_summary['Count'], labels=status_summary['Status'],
+                   autopct='%1.1f%%', startangle=90,
+                   colors=['green', 'yellow', 'red', 'darkred'])
+        ax_pie.set_title('🧁 Package SLA Status (Pie Chart)')
+        st.pyplot(fig_pie)
 
-    # 在 Streamlit 中显示
-    st.pyplot(fig_bar)
-    st.pyplot(fig_pie)
+    # 展示表格
+    st.dataframe(df_valid[['运单号', '签入时间', '派送方', '中心', 'SLA时效（小时）', '已耗时（小时）', '血条状态']])
 
+    # 导出功能
+    def to_excel(dataframe: pd.DataFrame) -> BytesIO:
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            dataframe.to_excel(writer, index=False, sheet_name='SLA Report')
+        output.seek(0)
+        return output
+
+    export_data = to_excel(df_valid)
+    st.download_button("📥 Download Result as Excel", data=export_data, file_name="sla_result.xlsx")
