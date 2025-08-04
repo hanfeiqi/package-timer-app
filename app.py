@@ -96,13 +96,13 @@ if waybill_file and sla_file:
     status_summary.columns = ['Status', 'Count']
 
     # 柱状图
-    fig_bar, ax_bar = plt.subplots()
+    fig_bar, ax_bar = plt.subplots(figsize=(6, 4))
     ax_bar.bar(status_summary['Status'], status_summary['Count'], color=['green', 'yellow', 'red', 'darkred'])
     ax_bar.set_title('📊 Package SLA Status (Bar Chart)')
     ax_bar.set_ylabel('Parcel Count')
 
     # 饼图
-    fig_pie, ax_pie = plt.subplots()
+    fig_pie, ax_pie = plt.subplots(figsize=(5, 54))
     ax_pie.pie(status_summary['Count'], labels=status_summary['Status'],
                autopct='%1.1f%%', startangle=90,
                colors=['green', 'yellow', 'red', 'darkred'])
