@@ -10,7 +10,8 @@ st.set_page_config(page_title="📦 Package SLA Tracker", layout="wide")
 st.title("📦 Package SLA Tracker with GOFO Time")
 
 # 上传数据文件
-uploaded_file = st.file_uploader("Upload your package data (.xlsx)", type=["xlsx"])
+uploaded_file = st.file_uploader("Upload your package data (.xlsx or .csv)", type=["xlsx", "csv"])
+sla_file = st.file_uploader("Upload SLA config (.xlsx or .csv)", type=["xlsx", "csv"])
 
 # 上传 SLA 配置文件
 sla_file = st.file_uploader("Upload SLA config (.xlsx)", type=["xlsx"])
