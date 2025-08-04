@@ -83,7 +83,7 @@ ax2.set_title('🧁 血条状态分布（饼图）')
 st.pyplot(fig2)
 
     # 导出
-    def to_excel(dataframes: dict) -> BytesIO:
+def to_excel(dataframes: dict) -> BytesIO:
         output = BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             for name, df in dataframes.items():
