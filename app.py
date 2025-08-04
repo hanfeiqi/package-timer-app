@@ -13,9 +13,6 @@ st.title("📦 Package SLA Tracker with GOFO Time")
 uploaded_file = st.file_uploader("Upload your package data (.xlsx or .csv)", type=["xlsx", "csv"])
 sla_file = st.file_uploader("Upload SLA config (.xlsx or .csv)", type=["xlsx", "csv"])
 
-# 上传 SLA 配置文件
-sla_file = st.file_uploader("Upload SLA config (.xlsx)", type=["xlsx"])
-
 if uploaded_file and sla_file:
     df = pd.read_excel(uploaded_file)
     sla_df = pd.read_excel(sla_file)
