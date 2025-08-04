@@ -81,21 +81,21 @@ if waybill_file and sla_file:
     import matplotlib.pyplot as plt
 
 # 统计血条状态分布
-status_counts = df_valid['血条状态'].value_counts().reset_index()
-status_counts.columns = ['状态', '数量']
+    status_counts = df_valid['血条状态'].value_counts().reset_index()
+    status_counts.columns = ['状态', '数量']
 
 # 绘制柱状图
-fig1, ax1 = plt.subplots()
-ax1.bar(status_counts['状态'], status_counts['数量'], color=['green', 'yellow', 'red', 'darkred'])
-ax1.set_title('📊 血条状态分布（柱状图）')
-ax1.set_ylabel('包裹数量')
-st.pyplot(fig1)
+    fig1, ax1 = plt.subplots()
+    ax1.bar(status_counts['状态'], status_counts['数量'], color=['green', 'yellow', 'red', 'darkred'])
+    ax1.set_title('📊 血条状态分布（柱状图）')
+    ax1.set_ylabel('包裹数量')
+    st.pyplot(fig1)
 
 # 绘制饼图
-fig2, ax2 = plt.subplots()
-ax2.pie(status_counts['数量'], labels=status_counts['状态'],
-        autopct='%1.1f%%', startangle=90,
-        colors=['green', 'yellow', 'red', 'darkred'])
-ax2.set_title('🧁 血条状态分布（饼图）')
-st.pyplot(fig2)
+    fig2, ax2 = plt.subplots()
+    ax2.pie(status_counts['数量'], labels=status_counts['状态'],
+            autopct='%1.1f%%', startangle=90,
+            colors=['green', 'yellow', 'red', 'darkred'])
+    ax2.set_title('🧁 血条状态分布（饼图）')
+    st.pyplot(fig2)
 
