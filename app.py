@@ -24,7 +24,7 @@ if waybill_file and sla_file:
     sla_dict = dict(zip(sla_df['中心'], sla_df['SLA小时']))
 
     # 数据清洗
-    df['签入时间'] = pd.to_datetime(df['签入时间'], errors='coerce')
+    df['签入时间'] = pd.to_datetime(df['签入时间'], dayfirst=True, errors='coerce')
     df['中心'] = df['目的中心'].astype(str).str[:3]
     df['SLA小时'] = df['中心'].map(sla_dict)
     now = datetime.now()
